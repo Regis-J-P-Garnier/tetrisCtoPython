@@ -1,3 +1,4 @@
+from curses import KEY_ENTER
 from tkinter import W
 import pygame
 import os
@@ -10,7 +11,8 @@ from pygame.locals import (
     K_LEFT,
     K_RIGHT,
     K_ESCAPE,
-    KEYDOWN,
+    K_SPACE,
+    KEYDOWN,  
     QUIT,
 )
 import pygame.freetype
@@ -18,15 +20,26 @@ import copy
 
 PATH_IMGS="assets/imgs/"
 PATH_FONTS="assets/fonts/"
+PATH_SOUNDS="assets/sounds/"
 X_SCREEN = 640
-Y_SCREEN = 480
+Y_SCREEN = 430
 N = 10 # WARN: 10 + 1 for allowing tests (change test method for reduce table ?)   
 M = 22
 CELL_SIZE=18
 PLAYFIELD_X_OFFSET=28
 PLAYFIELD_Y_OFFSET=-5
-INITIAL_SPEED=0.45
-KEY_DOWN_SPEED=0.05
+INITIAL_SPEED=0.20
+RGB_BLACK=(0,0,0)
+RGB_RED=(255,0,0)
+RGB_WHITE=(255,255,255)
+RGB_GREY=(192,192,192)
+FPS_GAME = 60
+FPS_MENU = 15
+NB_LINES_BY_LEVEL = 25
+SFX_VOLUME = 0.075
+MUSIC_VOLUME = 0.01
+#KEY_DOWN_SPEED=0.05
+
 
 class Cell():
     def __init__(self, x=0, y=0, value=0):
@@ -59,7 +72,7 @@ class playfield():
         self.__field[cell.getY()][cell.getX()] = cell.getColor()
     def get(self,cell):
         return Cell(cell.getX(),cell.getY(),self.__field[cell.getY()][cell.getX()])
-    def draw(self):
+    def draw(self, level):
         for idxLine, line in  enumerate(self.__field):
             for idxColumn,int_cell in enumerate(line):
                 if int_cell==0:
@@ -67,7 +80,7 @@ class playfield():
                 pg_Window.blit(     
                             self.__sprite_block, 
                             (idxColumn*CELL_SIZE+PLAYFIELD_X_OFFSET,idxLine*CELL_SIZE+PLAYFIELD_Y_OFFSET), 
-                            (int_cell*CELL_SIZE+8*CELL_SIZE,0,CELL_SIZE,CELL_SIZE)
+                            (int_cell*CELL_SIZE+8*CELL_SIZE,CELL_SIZE*(level%4),CELL_SIZE,CELL_SIZE)
                         )                
     def cleanLines(self):
         linesCounter=0
@@ -80,9 +93,15 @@ class playfield():
                 for column in range(N):
                     self.__field[0][column] = 0
             linesCounter = linesCounter + 1    
-            time.sleep(0.25)
-        print(linesCounter)
-        return linesCounter
+            time.sleep(0.10)
+        freeEmptyCells=len(self.__field)*len(self.__field[0])
+        for idxY in range(M):
+            for idxX in range(N):
+                neddToBeCount=True
+                if self.__field[idxY][idxX] != 0:
+                   freeEmptyCells =  freeEmptyCells - 1
+                # TODO: A FLOOD ALGO TO FIND "open" cells only 
+        return linesCounter, freeEmptyCells
     
     def isOverLoad(self):
         for column in range(N):
@@ -99,7 +118,7 @@ class playfield():
 class Brick():          
     _lst_brickModels={
             "I":{"shape":[1,5,3,7], 'color':1},
-            "Z":{"shape":[2,4,5,7], 'color':2},
+            "Z":{"shape":[2,5,4,7], 'color':2},
             "S":{"shape":[3,5,4,6], 'color':3},
             "T":{"shape":[3,5,4,7], 'color':4},
             "L":{"shape":[2,5,3,7], 'color':5},
@@ -337,21 +356,21 @@ class Brick():
                 return False
             return True
         
-    def draw(self):
+    def draw(self, level):
         if self._isOnplayfield:
             for idxC, cell in enumerate(self._brickActualPos):
                 if cell.y > 1:
                     pg_Window.blit( 
                                     self._sprite_block, 
                                     (cell.x*CELL_SIZE+PLAYFIELD_X_OFFSET, cell.y*CELL_SIZE+PLAYFIELD_Y_OFFSET), 
-                                    (self._color*CELL_SIZE,0,CELL_SIZE,CELL_SIZE) 
+                                    (self._color*CELL_SIZE,CELL_SIZE*(level%4),CELL_SIZE,CELL_SIZE) 
                                 )#self._color
         else:
             for idxC, cell in enumerate(self._brickActualPos):
                 pg_Window.blit( 
                                 self._sprite_block, 
                                 (194+cell.x*CELL_SIZE+PLAYFIELD_X_OFFSET, 320-36+cell.y*CELL_SIZE+PLAYFIELD_Y_OFFSET), 
-                                (self._color*CELL_SIZE,0,CELL_SIZE,CELL_SIZE) 
+                                (self._color*CELL_SIZE,0+CELL_SIZE*(level%4),CELL_SIZE,CELL_SIZE) 
                             )#self._color
 class HMovingTimer():
     def __init__(self, delay=0):
@@ -368,159 +387,193 @@ class HMovingTimer():
     def isOverdelay(self):
         return self.getDifference() > self.__delay
     def getAndResetOnDelay(self):
-        #print(("delay",self.__delay,"start",self.__startTime,"actual",self.__actualTime, "diff", self.getDifference(),"isOverdelay",self.isOverdelay()))
         if self.isOverdelay():
             self.reset()
             return True
         return False     
-         
+#
+#   PYGAME INIT & ASSETS LOADING
+#         
 pygame.init()
+pygame.mixer.init()
 pg_Window = pygame.display.set_mode((X_SCREEN, Y_SCREEN))
-pygame.key.set_repeat(400, 30)
-SCORE_FONT = pygame.freetype.Font(os.path.join(PATH_FONTS, f"unifont-14.0.04.ttf"), 24)
-SPRITE_BLOCK = pygame.image.load(os.path.join(PATH_IMGS, f"tiles2.png")).convert()
-backBackground = pygame.image.load(os.path.join(PATH_IMGS, f"redArea.png")).convert()
-background = pygame.image.load(os.path.join(PATH_IMGS, f"background2.png")).convert()
+# ALCO: CONFIGURE INPUTS
+pygame.key.set_repeat(150, 45)
+# ALGO: LOAD ASSETS
+# DESC: fonts
+SCORE_FONT = pygame.freetype.Font(os.path.join(PATH_FONTS, f"unifont-14.0.04.ttf"), 16)
+LARGE_FONT = pygame.freetype.Font(os.path.join(PATH_FONTS, f"unifont-14.0.04.ttf"),115)
+SMALL_FONT = pygame.freetype.Font(os.path.join(PATH_FONTS, f"unifont-14.0.04.ttf"),10)
+
+# DESC: images
+SPRITE_BLOCK = pygame.image.load(os.path.join(PATH_IMGS, f"tiles2.png")).convert_alpha()
+backBackground = pygame.image.load(os.path.join(PATH_IMGS, f"redArea.png")).convert_alpha()
+background = pygame.image.load(os.path.join(PATH_IMGS, f"background2.png")).convert_alpha()
 frame = pygame.image.load(os.path.join(PATH_IMGS, f"frame2.png")).convert_alpha()
+# DESC: sounds
+snd_struggle = pygame.mixer.Sound(os.path.join(PATH_SOUNDS, 'sfx-struggle.wav'))
+tetrisTheme = pygame.mixer.music.load(os.path.join(PATH_SOUNDS, 'Tetris8BitRemixCover.wav'))
+pygame.mixer.Sound.set_volume(snd_struggle, SFX_VOLUME)
+pygame.mixer.music.set_volume(MUSIC_VOLUME)
+
 clock = pygame.time.Clock()
-movingTimer=HMovingTimer()
-movingTimer.setDelay(INITIAL_SPEED)
-pf_playfield=playfield() 
-b_brick=Brick(pf_playfield)
-b_brick.enterPlayfield()
-b_nextBrick=Brick(pf_playfield)
-dx=0
-dy=1
-rotate=False
-timer=0
-running = True
-score = 0
-totalCleanedLines=0
-level=0
-while running:
+
+def drawScore(dict_score, hOffset=1, vOffset=-50, haveTitle=True, Title=f"last game"):
+    if haveTitle is True:
+        text_surface, rect = SCORE_FONT.render(Title,  RGB_WHITE)
+        pg_Window.blit(text_surface, (265+hOffset,60+vOffset))     
+    text_surface, rect = SCORE_FONT.render(f"score:", RGB_WHITE)
+    pg_Window.blit(text_surface, (265+hOffset,90+vOffset))
+    text_surface, rect = SCORE_FONT.render(f'    {str(dict_score["score"]).zfill(9)}', RGB_WHITE)
+    pg_Window.blit(text_surface, (265+hOffset,105+vOffset))
+    text_surface, rect = SCORE_FONT.render(f"lines:",  RGB_WHITE) 
+    pg_Window.blit(text_surface, (265+hOffset,125+vOffset))
+    text_surface, rect = SCORE_FONT.render(f'    {str(dict_score["totalCleanedLines"]).zfill(9)}',  RGB_WHITE)
+    pg_Window.blit(text_surface, (265+hOffset,140+vOffset))
+    text_surface, rect = SCORE_FONT.render(f"level:",  RGB_WHITE) 
+    pg_Window.blit(text_surface, (265+hOffset,160+vOffset))
+    text_surface, rect = SCORE_FONT.render(f'    {str(dict_score["level"]).zfill(9)}',  RGB_WHITE)
+    pg_Window.blit(text_surface, (265+hOffset,175+vOffset))   
+        
+def pauseScreen(isGaming=True, isRunnig=True):
+    isPaused = True
+    pg_Window.fill(RGB_BLACK)
+    text_surface, rect = LARGE_FONT.render("paused", RGB_WHITE)
+    rect.center = ((X_SCREEN/2),(Y_SCREEN/2))
+    pg_Window.blit(text_surface, rect)
+    while isPaused:
+        try:
+            for event in pygame.event.get():
+
+                if event.type == KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        isPaused = False
+                    if event.key == pygame.K_ESCAPE:
+                        isPaused = False
+                        isGaming = False
+                elif event.type == pygame.QUIT:
+                    pygame.quit()
+                    quit()                   
+        except:
+            pass
+                
+        pygame.display.update()
+        clock.tick(FPS_MENU)
+    return isGaming, isRunnig
     
-    movingTimer.setDelay(INITIAL_SPEED)
-    
-    for event in pygame.event.get():
-        if event.type == KEYDOWN:
-            if event.key == K_ESCAPE:
-                running = False 
-            if (event.key == K_UP):
-                free = b_brick.rotate()
-                if not free:
-                    movingTimer.setDelay(0.0)    
-            if (event.key == K_LEFT):
-                free = b_brick.HMove(-1) 
-            if (event.key == K_RIGHT):
-                free = b_brick.HMove(1)
-            if (event.key == K_DOWN):
-                movingTimer.setDelay(KEY_DOWN_SPEED) 
-        elif event.type == QUIT:
-            running = False  
-    isBrickAlive =True        
-    if movingTimer.getAndResetOnDelay():
-        isBrickAlive = b_brick.VMove(1)
-    if not isBrickAlive:
-        b_brick.delete()
-        CleanedLines=pf_playfield.cleanLines()
-        print(("CleanedLines",CleanedLines))
-        totalCleanedLines= totalCleanedLines+CleanedLines
-        if CleanedLines ==1:
-            score = score+ 40*(level+1)
-        if CleanedLines ==2:
-            score = score+ 100*(level+1)
-        if CleanedLines ==3:
-            score = score+ 300*(level+1)
-        if CleanedLines ==4:
-            score = score+ 1200*(level+1)    
-        b_brick = b_nextBrick
+def titleScreen(dict_highScore,dict_score, isGaming=False, isRunning=True):
+    titleVOffset = -50
+    pg_Window.fill(RGB_BLACK)
+    text_surface, rect = SMALL_FONT.render("today I need a little bit of...",  RGB_GREY)
+    pg_Window.blit(text_surface, (150,335+titleVOffset))
+    text_surface, rect = LARGE_FONT.render("TETRIS",  RGB_WHITE)
+    pg_Window.blit(text_surface, (150,350+titleVOffset))
+    text_surface, rect = SCORE_FONT.render(f"<SPACE> to start --- <ESC> to quit",  RGB_WHITE)
+    pg_Window.blit(text_surface, (180,300+titleVOffset))
+    if dict_highScore["score"]>0:            
+        drawScore(dict_score, hOffset=-120, vOffset=(50+titleVOffset), haveTitle=True, Title=f"last game")
+        drawScore(dict_highScore, hOffset=120, vOffset=(50+titleVOffset), haveTitle=True, Title=f"high score")
+    isWaiting = True
+    while isWaiting:
+        try:
+            for event in pygame.event.get():
+                if event.type == KEYDOWN:
+                    if event.key == K_SPACE:
+                        isWaiting = False
+                        isGaming = True
+                    if event.key == K_ESCAPE:
+                        isWaiting = False
+                        isRunning = False
+                        isGaming = False 
+                elif event.type == QUIT:
+                        isWaiting = False
+                        isRunning = False
+                        isGaming = False
+        except:
+            pass      
+        pygame.display.update()
+        clock.tick(FPS_MENU)
+    return isGaming, isRunning
+      
+def Scoring(dict_score):
+    dict_score=copy.deepcopy(dict_score)
+    dict_score["totalCleanedLines"]= dict_score["totalCleanedLines"]+CleanedLines
+    if (dict_score["totalCleanedLines"])%NB_LINES_BY_LEVEL ==0: # TODO: pass each brick posed, do better than that !
+        dict_score["level"]=(dict_score["totalCleanedLines"])//NB_LINES_BY_LEVEL
+    gain=[0,40,100,300,1200]
+    dict_score["score"] = dict_score["score"] + gain[CleanedLines]*(dict_score["level"]+1)
+    dict_score["score"] = dict_score["score"] + freeEmptyCells
+    return dict_score
+
+isRunning  = True
+isGaming = False
+dict_score={"score":0,"level":0,"totalCleanedLines":0,}
+dict_highScore={"score":0,"level":0,"totalCleanedLines":0,}
+while isRunning:
+    if dict_highScore["score"] < dict_score["score"]:
+        dict_highScore["score"]=copy.deepcopy(dict_score["score"])
+    isGaming, isRunning=titleScreen(dict_highScore, dict_score, isGaming, isRunning)
+    while isGaming:
+        dict_score={"score":0,"level":0,"totalCleanedLines":0,}
+        dx=0
+        dy=1
+        rotate=False
+        timer=0
+        movingTimer=HMovingTimer()
+        speed = INITIAL_SPEED
+        movingTimer.setDelay(speed) 
+        pf_playfield=playfield() 
+        b_brick=Brick(pf_playfield)
         b_brick.enterPlayfield()
         b_nextBrick=Brick(pf_playfield)
-    pg_Window.fill((255,255,255))
-    pg_Window.blit(backBackground, (0, 0))   
-    pg_Window.blit(background, (0, 0))
-    text_surface, rect = SCORE_FONT.render(str(score).zfill(6), (0, 0, 0))
-    pg_Window.blit(text_surface, (300,100))
-    b_brick.draw()
-    b_nextBrick.draw()
-    #time.sleep(0.1)
-    pf_playfield.draw()
-    pg_Window.blit(frame, (0, 0))
-    if pf_playfield.isOverLoad():
-            running = False  
-    #time.sleep(0.1)
-    pygame.display.flip()
-    clock.tick(60)
+        pygame.mixer.music.play(-1)
+        while isGaming:
+            movingTimer.setDelay(speed)
+            for event in pygame.event.get():
+                if event.type == KEYDOWN:
+                    if event.key == K_SPACE:
+                        pygame.mixer.music.stop() 
+                        isGaming, isRunning=pauseScreen(isGaming, isRunning)
+                        pygame.mixer.music.play(-1)  
+                    if event.key == K_ESCAPE:
+                        isGaming = False 
+                    if (event.key == K_UP):
+                        free = b_brick.rotate()
+                        if not free:
+                            movingTimer.setDelay(0.0)    
+                    if (event.key == K_LEFT):
+                        free = b_brick.HMove(-1) 
+                    if (event.key == K_RIGHT):
+                        free = b_brick.HMove(1)
+                    if (event.key == K_DOWN):
+                        movingTimer.setDelay(speed/4) 
+                elif event.type == QUIT:
+                    isRunning = False
+                    isGaming = False
+            isBrickAlive =True        
+            if movingTimer.getAndResetOnDelay():
+                isBrickAlive = b_brick.VMove(1)
+            if not isBrickAlive:
+                b_brick.delete()
+                CleanedLines, freeEmptyCells=pf_playfield.cleanLines()
+                if CleanedLines >0:
+                    pygame.mixer.Sound.play(snd_struggle) 
+                dict_score=Scoring(dict_score)
+                b_brick = b_nextBrick
+                b_brick.enterPlayfield()
+                b_nextBrick=Brick(pf_playfield)
+                pg_Window.fill(RGB_BLACK)
+            pg_Window.blit(backBackground, (-150, -50))   
+            pg_Window.blit(background, (0, 0))
+            drawScore(dict_score, hOffset=1, vOffset=-4, haveTitle=False, Title=None)
+            b_brick.draw(dict_score["level"])
+            b_nextBrick.draw(dict_score["level"])
+            pf_playfield.draw(dict_score["level"])
+            if pf_playfield.isOverLoad():
+                    isGaming = False
+            pg_Window.blit(frame, (0, 0))
+            pygame.display.flip()
+            clock.tick(FPS_GAME)
+        pygame.mixer.music.stop()
 pygame.quit()
-
-exit(0)
-
-
-
-
-
-
-while running:
-    fl_time = time.clock_gettime(time.CLOCK_REALTIME)-actualTime
-    actualTime=time.clock_gettime(time.CLOCK_REALTIME)
-    timer += fl_time
-    
-    
-    for i in range(4):
-        b[i]=copy.deepcopy(a[i])
-        a[i].x+=dx
-    
-    print(check)
-    for i in range(4):
-        if not check():
-           a[i]=copy.deepcopy(b[i])
-           
-    if rotate:
-        p=copy.deepcopy(a[i])
-        for i in range(4):
-            x = a[i].y-p.y
-            y = a[i].x-p.x
-            a[i].x = p.x - x
-            a[i].y = p.y + y
-            for i in range(4):
-                if not check():
-                    a[i]=copy.deepcopy(b[i])
-    
-    if timer>delay:
-        for i in range(4):
-            b[i]=copy.deepcopy(a[i])
-            a[i].y=a[i].y+1
-        if not check():
-            for i in range(4):
-                PLAY_FIELD[b[i].y][b[i].x]=colorNum
-            colorNum=1+random.randrange(0, 7)
-            n = random.randrange(0, 7)
-            for i in range(4):
-                a[i].x = figures[n][i] % 2
-                a[i].y = figures[n][i] // 2
-        timer=0           
-    
-    k=M-1
-    for i in range(M-1,0,-1):
-        print((M,i))
-        count=0
-        for j in range(0,N):
-            if not PLAYFIELD[i][j]==0:
-                count=count+1
-            PLAYFIELD[k][j]=PLAYFIELD[i][j]
-        if count < N:
-            k = k-1
-    dx=0
-    rotate=False
-    delay=0.3 
-    
-    pg_Window.blit(background, (0, 0))
-    for i in range(0,M):
-        for j in range(0,N):
-            if PLAYFIELD[i][j]==0:
-                continue
-            #pg_Window.blit( s, (j*18,i*18), (FIELD[i][j]*18,0,18,18) )
-            pg_Window.blit( s, (j*18+28,i*18+31), (PLAY_FIELD[i][j]*18,0,18,18) )
-    for i in range(0,4):
-            pg_Window.blit( s, (a[i].x*18+28,a[i].y*18+31), (colorNum*18,0,18,18) )
-    #pg_Window.blit(frame, (0, 0))
+quit()
