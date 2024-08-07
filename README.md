@@ -3,9 +3,9 @@ Tetris in Pygame SRS
 
 RJPG  
 <[regis.jp.garnier@gmx.com](mailto:regis.jp.garnier@gmx.com)\>  
-version : 1.0
-date : 09/2022
-reason for change : initial
+* version : 1.0
+* date : 09/2022
+* reason for change : initial
 
 Introduction
 ------------
