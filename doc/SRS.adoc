@@ -11,6 +11,7 @@
 |======
 version; date; reason for change
 1.0;09/2022;initial
+1.1;08/2024;add docker support
 |======
 
 == Introduction
@@ -22,15 +23,12 @@ Transform a C++/SFML code from ``https://www.youtube.com/watch?v=zH_omFPqMO4`` t
 == Introduction
 
 === Purpose
-*TetrisInPygame*, a test of PyGame more basics structures/methods to compare with the C++/SFML and test different tools.
+*TetrisInPygame*, a test of PyGame more basics structures/methods to compare with the C++/SFML and test different tools. In Docker, Docker compose for X11.
 
 === Scope
 * Transcript original Code then Refactor Method  
+* work on every X11 by contenairization
 * More OOP structure
 * More NES/FAMICOM style gameplay scoring, leveling, looking
 * Keep original (not PYGAME sub-routines use) collision detection
 * Funny in 2 days
-
-
-== Description
-
