@@ -7,7 +7,7 @@
 ==== Revision History
 
 [%header,format="csv", separator=";", cols=3]
-[%autowidth]
+[%autowidth, cols="a,a"]
 |======
 version; date; reason for change
 1.0;09/2022;initial
