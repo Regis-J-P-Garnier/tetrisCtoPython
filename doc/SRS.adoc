@@ -1,0 +1,36 @@
+= Tetris in Pygame SRS
+:Author:    RJPG
+:Email:     <regis.jp.garnier@gmx.com>
+:Date:      08/2022
+:Revision:  1.0
+:imagesdir: ../imgs  
+==== Revision History
+
+[%header,format="csv", separator=";", cols=3]
+[%autowidth]
+|======
+version; date; reason for change
+1.0;09/2022;initial
+|======
+
+== Introduction
+
+=== Purpose
+
+Transform a C++/SFML code from ``https://www.youtube.com/watch?v=zH_omFPqMO4`` to Py/PyGame.
+
+== Introduction
+
+=== Purpose
+*TetrisInPygame*, a test of PyGame more basics structures/methods to compare with the C++/SFML and test different tools.
+
+=== Scope
+* Transcript original Code then Refactor Method  
+* More OOP structure
+* More NES/FAMICOM style gameplay scoring, leveling, looking
+* Keep original (not PYGAME sub-routines use) collision detection
+* Funny in 2 days
+
+
+== Description
+
