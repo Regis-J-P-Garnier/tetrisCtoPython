@@ -18,13 +18,39 @@ from pygame.locals import (
 import pygame.freetype
 import copy
 
+##############################################
+# DESC
+##############################################
+
+# A BLOCK = 
+"#"
+# A BRICK = 
+"####"
+# THE PLAYFIELD = 
+"""
+___#____
+___#____
+___##___
+________
+________
+###__##_
+#######_
+########
+########
+"""
+
+##############################################
+# VARS
+##############################################
+
 PATH_IMGS="assets/imgs/"
 PATH_FONTS="assets/fonts/"
 PATH_SOUNDS="assets/sounds/"
 X_SCREEN = 640
 Y_SCREEN = 430
-N = 10 # WARN: 10 + 1 for allowing tests (change test method for reduce table ?)   
-M = 22
+N = 10  # TODO: RENAME
+        # WARN: 10 + 1 for allowing tests (change test method for reduce table ?)   
+M = 22  # TODO: RENAME 
 CELL_SIZE=18
 PLAYFIELD_X_OFFSET=28
 PLAYFIELD_Y_OFFSET=-5
@@ -40,8 +66,19 @@ SFX_VOLUME = 0.075
 MUSIC_VOLUME = 0.01
 #KEY_DOWN_SPEED=0.05
 
-
+##############################################
+# STRUCTURES
+##############################################
+"""
++-------------+ 1  n +---------+ 1  4 +--------+
+|  PLAYFIELD  | <--- +  BRICK  + ---> |  CELL  |
++-------------+      +---------+      +--------+
+"""
+#
+# CELL
+#
 class Cell():
+    # DESC: a celle for the brick and (interface with) the playground
     def __init__(self, x=0, y=0, value=0):
         self.x=x
         self.y=y
@@ -58,21 +95,30 @@ class Cell():
         return self.y
     def getColor(self):
         return self.value
-    
+#
+# PLAYFIELD
+#    
 class playfield():
+    # DESC: the TETRIS main playfield
+    # WARN: USE ONLY NUMBER INSTEAD OF CELL "INSIDE", MAYBE CHANGE THAT OR ADD "EXPLICIT" CELL CONVERTER 
     def __init__(self):
         self.__sprite_block = SPRITE_BLOCK
         self.__field=[]
         for y in range(M): # TODO: more efficient
             self.__field.append([])
             for x in range(N):
-                self.__field[y].append(0)       
+                self.__field[y].append(0) # TODO: MAKE A INTERNAL CELL VERSION ?   
         #self.__field=[[0]*N]*M  # DESC: M*[LINE of Nx0] not work cause of memory copy as adress in PYTHON
     def set(self,cell):
+        # TODO: RENAME FUNCTION AND HAVE A ALL CELLS VERSION
+        # TODO: MAKE A INTERNAL CELL VERSION ?
         self.__field[cell.getY()][cell.getX()] = cell.getColor()
     def get(self,cell):
+        # TODO: RENAME FUNCTION AND HAVE A ALL CELLS VERSION
+        # TODO: MAKE A INTERNAL CELL VERSION ?
         return Cell(cell.getX(),cell.getY(),self.__field[cell.getY()][cell.getX()])
     def draw(self, level):
+        # TODO: MAKE A INTERNAL CELL VERSION ?
         for idxLine, line in  enumerate(self.__field):
             for idxColumn,int_cell in enumerate(line):
                 if int_cell==0:
@@ -86,24 +132,29 @@ class playfield():
         linesCounter=0
         for idxLine, line in enumerate(self.__field):
             if 0 in line:
+                # ALGO: FOR NOT A FULL LINE
                 continue
+            # ALGO: FOR A FULL LINE
             for onTopY in range(idxLine,0,-1):
                 for column in range(N):
                     self.__field[onTopY][column]=self.__field[onTopY-1][column]
                 for column in range(N):
                     self.__field[0][column] = 0
             linesCounter = linesCounter + 1    
-            time.sleep(0.10)
+            time.sleep(0.10) # ALGO: LATENCY FOR AUDIO & VISUUAL EFFECT
+        # ALGO: FOR ALL THE PLAYGROUND FROM TOP
+        # TODO: BETTER HOLE DETECTION ON PLAYGROUND
         freeEmptyCells=len(self.__field)*len(self.__field[0])
         for idxY in range(M):
             for idxX in range(N):
                 neddToBeCount=True
                 if self.__field[idxY][idxX] != 0:
                    freeEmptyCells =  freeEmptyCells - 1
-                # TODO: A FLOOD ALGO TO FIND "open" cells only 
+                # TODO: A FLOOD ALGO TO FIND "OPEN" CELLS ONLY 
         return linesCounter, freeEmptyCells
     
     def isOverLoad(self):
+        # TODO : REFACTOR
         for column in range(N):
             if self.__field[2][column] != 0:
                 return True
@@ -114,8 +165,12 @@ class playfield():
             if self.__field[0][column] != 0:
                 return True
         return False
-        
-class Brick():          
+#
+# BRICK
+#        
+class Brick(): 
+    # 
+    # DESC: BASIC CATALOG         
     _lst_brickModels={
             "I":{"shape":[1,5,3,7], 'color':1},
             "Z":{"shape":[2,5,4,7], 'color':2},
@@ -125,7 +180,7 @@ class Brick():
             "J":{"shape":[3,5,7,6], 'color':6},
             "O":{"shape":[2,3,4,5], 'color':7},
                         }
-    
+
     def __init__(self, playfield):
         self.counterRotation = 0
         self._isOnplayfield = False
@@ -268,7 +323,6 @@ class Brick():
             refV=1
             # TODO : refactor with a better tech if time
             if self._brickActualPos[1].x==self._brickActualPos[3].x:
-                
                 newX.append(self._brickActualPos[refV].x+1)
                 newX.append(self._brickActualPos[refV].x)
                 newX.append(self._brickActualPos[refV].x)
@@ -276,10 +330,8 @@ class Brick():
                 newY.append(self._brickActualPos[refV].y-1)
                 newY.append(self._brickActualPos[refV].y)
                 newY.append(self._brickActualPos[refV].y-1)
-                newY.append(self._brickActualPos[refV].y)
-                
+                newY.append(self._brickActualPos[refV].y)  
             else:    
-                
                 newX.append(self._brickActualPos[refV].x-1)
                 newX.append(self._brickActualPos[refV].x)
                 newX.append(self._brickActualPos[refV].x-1)
@@ -288,7 +340,6 @@ class Brick():
                 newY.append(self._brickActualPos[refV].y)
                 newY.append(self._brickActualPos[refV].y)
                 newY.append(self._brickActualPos[refV].y+1)
-                
             for x in newX:
                 if not(x >= 0 and x <N):
                     return True    
@@ -323,7 +374,6 @@ class Brick():
                 newY.append(self._brickActualPos[refV].y)
                 newY.append(self._brickActualPos[refV].y)#
                 newY.append(self._brickActualPos[refV].y+1)
-                
             for x in newX:
                 if not(x >= 0 and x <N):
                     return True    
@@ -372,6 +422,9 @@ class Brick():
                                 (194+cell.x*CELL_SIZE+PLAYFIELD_X_OFFSET, 320-36+cell.y*CELL_SIZE+PLAYFIELD_Y_OFFSET), 
                                 (self._color*CELL_SIZE,0+CELL_SIZE*(level%4),CELL_SIZE,CELL_SIZE) 
                             )#self._color
+#
+# (HMOVING)TIMER
+#
 class HMovingTimer():
     def __init__(self, delay=0):
         self.__delay=delay
@@ -391,12 +444,15 @@ class HMovingTimer():
             self.reset()
             return True
         return False     
-#
-#   PYGAME INIT & ASSETS LOADING
-#         
+    
+##############################################
+# PYGAME INIT & ASSETS LOADING
+##############################################
+
 pygame.init()
 pygame.mixer.init()
 pg_Window = pygame.display.set_mode((X_SCREEN, Y_SCREEN))
+# DEPRECATED : pg_Window = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)   
 # ALCO: CONFIGURE INPUTS
 pygame.key.set_repeat(150, 45)
 # ALGO: LOAD ASSETS
@@ -415,10 +471,15 @@ snd_struggle = pygame.mixer.Sound(os.path.join(PATH_SOUNDS, 'sfx-struggle.wav'))
 tetrisTheme = pygame.mixer.music.load(os.path.join(PATH_SOUNDS, 'Tetris8BitRemixCover.wav'))
 pygame.mixer.Sound.set_volume(snd_struggle, SFX_VOLUME)
 pygame.mixer.music.set_volume(MUSIC_VOLUME)
-
 clock = pygame.time.Clock()
 
-def drawScore(dict_score, hOffset=1, vOffset=-50, haveTitle=True, Title=f"last game"):
+##############################################
+# PYGAME DRAWING SCREENS & BOXES
+##############################################
+#
+# SCREEN: SCORE
+#
+def drawScreenScore(dict_score, hOffset=1, vOffset=-50, haveTitle=True, Title=f"last game"):
     if haveTitle is True:
         text_surface, rect = SCORE_FONT.render(Title,  RGB_WHITE)
         pg_Window.blit(text_surface, (265+hOffset,60+vOffset))     
@@ -434,8 +495,10 @@ def drawScore(dict_score, hOffset=1, vOffset=-50, haveTitle=True, Title=f"last g
     pg_Window.blit(text_surface, (265+hOffset,160+vOffset))
     text_surface, rect = SCORE_FONT.render(f'    {str(dict_score["level"]).zfill(9)}',  RGB_WHITE)
     pg_Window.blit(text_surface, (265+hOffset,175+vOffset))   
-        
-def pauseScreen(isGaming=True, isRunnig=True):
+#
+# SCREEN: PAUSE
+#     
+def drawScreenPause(isGaming=True, isRunnig=True):
     isPaused = True
     pg_Window.fill(RGB_BLACK)
     text_surface, rect = LARGE_FONT.render("paused", RGB_WHITE)
@@ -443,6 +506,7 @@ def pauseScreen(isGaming=True, isRunnig=True):
     pg_Window.blit(text_surface, rect)
     while isPaused:
         try:
+            # TODO: Key Loop Manager function (factory & configuration key-funct by hashtable)
             for event in pygame.event.get():
 
                 if event.type == KEYDOWN:
@@ -456,12 +520,13 @@ def pauseScreen(isGaming=True, isRunnig=True):
                     quit()                   
         except:
             pass
-                
         pygame.display.update()
         clock.tick(FPS_MENU)
     return isGaming, isRunnig
-    
-def titleScreen(dict_highScore,dict_score, isGaming=False, isRunning=True):
+#
+# SCREEN: TITLE
+#  
+def drawScreenTitle(dict_highScore,dict_score, isGaming=False, isRunning=True):
     titleVOffset = -50
     pg_Window.fill(RGB_BLACK)
     text_surface, rect = SMALL_FONT.render("today I need a little bit of...",  RGB_GREY)
@@ -471,11 +536,12 @@ def titleScreen(dict_highScore,dict_score, isGaming=False, isRunning=True):
     text_surface, rect = SCORE_FONT.render(f"<SPACE> to start --- <ESC> to quit",  RGB_WHITE)
     pg_Window.blit(text_surface, (180,300+titleVOffset))
     if dict_highScore["score"]>0:            
-        drawScore(dict_score, hOffset=-120, vOffset=(50+titleVOffset), haveTitle=True, Title=f"last game")
-        drawScore(dict_highScore, hOffset=120, vOffset=(50+titleVOffset), haveTitle=True, Title=f"high score")
+        drawScreenScore(dict_score, hOffset=-120, vOffset=(50+titleVOffset), haveTitle=True, Title=f"last game")
+        drawScreenScore(dict_highScore, hOffset=120, vOffset=(50+titleVOffset), haveTitle=True, Title=f"high score")
     isWaiting = True
     while isWaiting:
         try:
+            # TODO: Key Loop Manager function (factory & configuration key-funct by hashtable)
             for event in pygame.event.get():
                 if event.type == KEYDOWN:
                     if event.key == K_SPACE:
@@ -486,34 +552,43 @@ def titleScreen(dict_highScore,dict_score, isGaming=False, isRunning=True):
                         isRunning = False
                         isGaming = False 
                 elif event.type == QUIT:
-                        isWaiting = False
-                        isRunning = False
-                        isGaming = False
+                    isWaiting = False
+                    isRunning = False
+                    isGaming = False
         except:
-            pass      
+            pass   # TODO: ERROR MANAGEMENT   
         pygame.display.update()
         clock.tick(FPS_MENU)
     return isGaming, isRunning
-      
-def Scoring(dict_score):
+
+##############################################
+# PYGAME GAME LOOP
+##############################################
+#
+# HELPER FUNCTION: SCORE
+#      
+def updateScore(dict_score, CleanedLines=0, freeEmptyCells=0):
     dict_score=copy.deepcopy(dict_score)
+    gain=[0,40,100,300,1200]
     dict_score["totalCleanedLines"]= dict_score["totalCleanedLines"]+CleanedLines
     if (dict_score["totalCleanedLines"])%NB_LINES_BY_LEVEL ==0: # TODO: pass each brick posed, do better than that !
         dict_score["level"]=(dict_score["totalCleanedLines"])//NB_LINES_BY_LEVEL
-    gain=[0,40,100,300,1200]
     dict_score["score"] = dict_score["score"] + gain[CleanedLines]*(dict_score["level"]+1)
     dict_score["score"] = dict_score["score"] + freeEmptyCells
     return dict_score
 
-isRunning  = True
-isGaming = False
-dict_score={"score":0,"level":0,"totalCleanedLines":0,}
+# ALGO: STARTING CONDITIONS
+isRunning  = True # ALGO: SWITCH ON RUNNING MODE
+isGaming = False  # ALGO: NOT SWITCHING ON AUTO GAMING AT START
+dict_score={"score":0,"level":0,"totalCleanedLines":0,} 
 dict_highScore={"score":0,"level":0,"totalCleanedLines":0,}
 while isRunning:
+    # ALGO: MAIN LOOP & TITLE SCREEN
     if dict_highScore["score"] < dict_score["score"]:
-        dict_highScore["score"]=copy.deepcopy(dict_score["score"])
-    isGaming, isRunning=titleScreen(dict_highScore, dict_score, isGaming, isRunning)
+        dict_highScore=copy.deepcopy(dict_score)
+    isGaming, isRunning=drawScreenTitle(dict_highScore, dict_score, isGaming, isRunning)
     while isGaming:
+        # ALGO: STARTING A NEW GAME
         dict_score={"score":0,"level":0,"totalCleanedLines":0,}
         dx=0
         dy=1
@@ -522,58 +597,69 @@ while isRunning:
         movingTimer=HMovingTimer()
         speed = INITIAL_SPEED
         movingTimer.setDelay(speed) 
-        pf_playfield=playfield() 
-        b_brick=Brick(pf_playfield)
-        b_brick.enterPlayfield()
-        b_nextBrick=Brick(pf_playfield)
+        pf_playfield=playfield() # DESC: need the playfield 
+        b_brick=Brick(pf_playfield) # DEsc: add the first brick on the playfield 
+        b_brick.enterPlayfield() # DESC: activate first brick 
+        b_nextBrick=Brick(pf_playfield) # DESC: add the "next" brick 
         pygame.mixer.music.play(-1)
         while isGaming:
+            # ALGO: STARTING THE PLAYER LOOP 
             movingTimer.setDelay(speed)
+            # ALGO: MESSAGES PUMP
             for event in pygame.event.get():
+                # TODO: Key Loop Manager function (factory & configuration key-funct by hashtable)
                 if event.type == KEYDOWN:
                     if event.key == K_SPACE:
-                        pygame.mixer.music.stop() 
-                        isGaming, isRunning=pauseScreen(isGaming, isRunning)
+                        # ALGO: SWITCH TO A QUIET PAUSE MODE
+                        pygame.mixer.music.stop() # DESC: all sonud is managed in main program
+                        isGaming, isRunning=drawScreenPause(isGaming, isRunning)
                         pygame.mixer.music.play(-1)  
                     if event.key == K_ESCAPE:
+                        # ALGO: SWITCH GAMING MODE
                         isGaming = False 
                     if (event.key == K_UP):
-                        free = b_brick.rotate()
-                        if not free:
-                            movingTimer.setDelay(0.0)    
+                        # DESC: be "free" = can rotate
+                        isFree = b_brick.rotate() 
+                        if not isFree:
+                            movingTimer.setDelay(0.0) # DESC: move/test line NOW on can't rotate   
                     if (event.key == K_LEFT):
-                        free = b_brick.HMove(-1) 
+                        isFree = b_brick.HMove(-1) 
                     if (event.key == K_RIGHT):
-                        free = b_brick.HMove(1)
+                        isFree = b_brick.HMove(1)
                     if (event.key == K_DOWN):
-                        movingTimer.setDelay(speed/4) 
+                        movingTimer.setDelay(speed/4) # DESC: move quickly
                 elif event.type == QUIT:
                     isRunning = False
                     isGaming = False
             isBrickAlive =True        
-            if movingTimer.getAndResetOnDelay():
+            if movingTimer.getAndResetOnDelay(): # DESC: if needed to test the brick posiiion
                 isBrickAlive = b_brick.VMove(1)
-            if not isBrickAlive:
-                b_brick.delete()
-                CleanedLines, freeEmptyCells=pf_playfield.cleanLines()
+            if not isBrickAlive: # DESC: if brick can't move
+                b_brick.delete() # DESC: transform brick to colored "background" on playfield
+                CleanedLines, freeEmptyCells=pf_playfield.cleanLines() # DESC: clean lines in background of playfield 
+                # ALGO: LINE FOUND
                 if CleanedLines >0:
                     pygame.mixer.Sound.play(snd_struggle) 
-                dict_score=Scoring(dict_score)
-                b_brick = b_nextBrick
+                dict_score=updateScore(dict_score, CleanedLines, freeEmptyCells)     
+                b_brick = b_nextBrick 
                 b_brick.enterPlayfield()
                 b_nextBrick=Brick(pf_playfield)
                 pg_Window.fill(RGB_BLACK)
+            # ALGO: PYGAME DRAWING
             pg_Window.blit(backBackground, (-150, -50))   
             pg_Window.blit(background, (0, 0))
-            drawScore(dict_score, hOffset=1, vOffset=-4, haveTitle=False, Title=None)
+            drawScreenScore(dict_score, hOffset=1, vOffset=-4, haveTitle=False, Title=None)
             b_brick.draw(dict_score["level"])
             b_nextBrick.draw(dict_score["level"])
             pf_playfield.draw(dict_score["level"])
-            if pf_playfield.isOverLoad():
-                    isGaming = False
             pg_Window.blit(frame, (0, 0))
-            pygame.display.flip()
+            # ALGO: GO TO NEXT GAME "FRAME"
             clock.tick(FPS_GAME)
+            # ALGO: TEST IF GAME ENDED
+            if pf_playfield.isOverLoad():
+                isGaming = False
+            else:
+                pygame.display.flip()
         pygame.mixer.music.stop()
 pygame.quit()
 quit()

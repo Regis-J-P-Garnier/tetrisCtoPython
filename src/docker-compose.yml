@@ -1,0 +1,15 @@
+version: '2.4'
+services:
+    app:
+        network_mode: "host"
+        stdin_open: true # docker run -i
+        tty: true        # docker run -t
+        #container_name: tetris
+        volumes:
+            - /run/user/1000/pipewire-0:/tmp/pipewire-0
+        build: .
+        environment:
+            - XDG_RUNTIME_DIR=/tmp
+            - DISPLAY=:0.0
+
+            
