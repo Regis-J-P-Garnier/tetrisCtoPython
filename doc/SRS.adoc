@@ -17,13 +17,8 @@ version; date; reason for change
 == Introduction
 
 === Purpose
-
-Transform a C++/SFML code from ``https://www.youtube.com/watch?v=zH_omFPqMO4`` to Py/PyGame.
-
-== Introduction
-
-=== Purpose
 *TetrisInPygame*, a test of PyGame more basics structures/methods to compare with the C++/SFML and test different tools. In Docker, Docker compose for X11.
+*Transform a C++/SFML code from ``https://www.youtube.com/watch?v=zH_omFPqMO4`` to Py/PyGame.
 
 === Scope
 * Transcript original Code then Refactor Method  
